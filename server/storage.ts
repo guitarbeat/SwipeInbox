@@ -117,9 +117,17 @@ export class MemStorage implements IStorage {
   async createEmail(insertEmail: InsertEmail): Promise<Email> {
     const id = this.currentEmailId++;
     const email: Email = {
-      ...insertEmail,
       id,
+      sender: insertEmail.sender,
+      senderEmail: insertEmail.senderEmail,
+      subject: insertEmail.subject,
+      body: insertEmail.body,
       timestamp: new Date(),
+      priority: insertEmail.priority || "Normal",
+      unread: insertEmail.unread ?? true,
+      status: insertEmail.status || "inbox",
+      attachments: insertEmail.attachments || 0,
+      hasReply: insertEmail.hasReply || false,
     };
     this.emails.set(id, email);
     return email;
@@ -134,11 +142,11 @@ export class MemStorage implements IStorage {
     
     // Update stats
     if (status === "later") {
-      this.stats.forLater++;
+      this.stats.forLater = (this.stats.forLater || 0) + 1;
     } else if (status === "archived") {
-      this.stats.archived++;
+      this.stats.archived = (this.stats.archived || 0) + 1;
     }
-    this.stats.processedToday++;
+    this.stats.processedToday = (this.stats.processedToday || 0) + 1;
     
     return updatedEmail;
   }
@@ -146,8 +154,8 @@ export class MemStorage implements IStorage {
   async deleteEmail(id: number): Promise<boolean> {
     const deleted = this.emails.delete(id);
     if (deleted) {
-      this.stats.processedToday++;
-      this.stats.archived++;
+      this.stats.processedToday = (this.stats.processedToday || 0) + 1;
+      this.stats.archived = (this.stats.archived || 0) + 1;
     }
     return deleted;
   }
@@ -163,7 +171,7 @@ export class MemStorage implements IStorage {
 
   async incrementStat(field: keyof InsertStats): Promise<Stats> {
     if (typeof this.stats[field] === 'number') {
-      (this.stats as any)[field]++;
+      (this.stats as any)[field] = (this.stats as any)[field] + 1;
     }
     return this.stats;
   }

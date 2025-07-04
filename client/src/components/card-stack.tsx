@@ -5,7 +5,7 @@ import { EmailCard } from "./email-card";
 import { useSwipe } from "@/hooks/use-swipe";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { type Email } from "@shared/schema";
+import { type Email, type Stats } from "@shared/schema";
 
 interface CardStackProps {
   emails: Email[];
@@ -45,6 +45,7 @@ export function CardStack({ emails }: CardStackProps) {
   } = useSwipe({
     onSwipeLeft: () => handleSwipe('left'),
     onSwipeRight: () => handleSwipe('right'),
+    threshold: 80,
   });
 
   const handleSwipe = (direction: 'left' | 'right') => {
@@ -52,7 +53,7 @@ export function CardStack({ emails }: CardStackProps) {
 
     const currentEmail = emails[currentIndex];
     const status = direction === 'left' ? 'archived' : 'later';
-    const message = direction === 'left' ? 'Email archived' : 'Email saved for later';
+    const message = direction === 'left' ? 'Deleted' : 'Saved for later';
 
     setLastAction({ id: currentEmail.id, action: status });
     updateEmailMutation.mutate({ id: currentEmail.id, status });
@@ -81,10 +82,6 @@ export function CardStack({ emails }: CardStackProps) {
     setLastAction(null);
   };
 
-  const handleButtonAction = (direction: 'left' | 'right') => {
-    handleSwipe(direction);
-  };
-
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -101,7 +98,7 @@ export function CardStack({ emails }: CardStackProps) {
 
   if (emails.length === 0) {
     return (
-      <div className="h-96 flex items-center justify-center">
+      <div className="h-[500px] flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">🎉</span>
@@ -120,42 +117,24 @@ export function CardStack({ emails }: CardStackProps) {
   const visibleEmails = emails.slice(currentIndex, currentIndex + 3);
 
   return (
-    <div className="relative h-96">
+    <div className="relative h-[500px]">
       <AnimatePresence>
         {visibleEmails.map((email, index) => (
           <div
             key={email.id}
-            {...(index === 0 ? bind : {})}
+            {...(index === 0 ? bind() : {})}
             className="absolute inset-0"
           >
             <EmailCard
               email={email}
               index={index}
-              onSwipe={handleButtonAction}
               isDragging={isDragging && index === 0}
               dragOffset={dragOffset}
+              swipeDirection={swipeDirection}
             />
           </div>
         ))}
       </AnimatePresence>
-      
-      {/* Pass button action handler to parent */}
-      <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 flex space-x-8">
-        <button
-          onClick={() => handleButtonAction('left')}
-          className="w-16 h-16 bg-destructive text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
-          disabled={currentIndex >= emails.length}
-        >
-          <span className="text-xl">🗑️</span>
-        </button>
-        <button
-          onClick={() => handleButtonAction('right')}
-          className="w-20 h-20 bg-accent text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 active:scale-95"
-          disabled={currentIndex >= emails.length}
-        >
-          <span className="text-2xl">⏰</span>
-        </button>
-      </div>
     </div>
   );
 }

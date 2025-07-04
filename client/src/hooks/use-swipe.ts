@@ -17,25 +17,30 @@ export function useSwipe({
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 
   const bind = useGesture({
-    onDrag: ({ down, movement: [mx], direction: [xDir], velocity: [vx] }) => {
+    onDrag: ({ down, movement: [mx], direction: [xDir], velocity: [vx], cancel }) => {
       setIsDragging(down);
       
       if (down) {
         setDragOffset(mx);
         
-        // Show direction indicator
-        if (Math.abs(mx) > 50) {
+        // Show direction indicator earlier for better feedback
+        if (Math.abs(mx) > 30) {
           setSwipeDirection(mx > 0 ? 'right' : 'left');
         } else {
           setSwipeDirection(null);
+        }
+        
+        // Cancel drag if movement is too far to prevent weird behavior
+        if (Math.abs(mx) > 300) {
+          cancel();
         }
       } else {
         // Release
         setDragOffset(0);
         setSwipeDirection(null);
         
-        // Determine if swipe was significant enough
-        const isSignificantSwipe = Math.abs(mx) > threshold || Math.abs(vx) > 0.5;
+        // More sensitive swipe detection
+        const isSignificantSwipe = Math.abs(mx) > threshold || Math.abs(vx) > 0.3;
         
         if (isSignificantSwipe) {
           if (mx > 0) {
@@ -51,6 +56,12 @@ export function useSwipe({
       setDragOffset(0);
       setSwipeDirection(null);
     },
+  }, {
+    drag: {
+      filterTaps: true,
+      axis: 'x', // Only allow horizontal dragging
+      from: () => [0, 0], // Reset drag from current position
+    }
   });
 
   return {
