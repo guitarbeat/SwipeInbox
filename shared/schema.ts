@@ -23,6 +23,15 @@ export const stats = pgTable("stats", {
   archived: integer("archived").default(0),
 });
 
+export const activities = pgTable("activities", {
+  id: serial("id").primaryKey(),
+  emailId: integer("email_id").references(() => emails.id),
+  action: text("action").notNull(), // "archived", "later", "undone"
+  emailSubject: text("email_subject").notNull(),
+  emailSender: text("email_sender").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 export const insertEmailSchema = createInsertSchema(emails).omit({
   id: true,
   timestamp: true,
@@ -32,7 +41,14 @@ export const insertStatsSchema = createInsertSchema(stats).omit({
   id: true,
 });
 
+export const insertActivitySchema = createInsertSchema(activities).omit({
+  id: true,
+  timestamp: true,
+});
+
 export type Email = typeof emails.$inferSelect;
 export type InsertEmail = z.infer<typeof insertEmailSchema>;
 export type Stats = typeof stats.$inferSelect;
 export type InsertStats = z.infer<typeof insertStatsSchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;

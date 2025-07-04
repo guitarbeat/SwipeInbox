@@ -1,6 +1,6 @@
-import { emails, stats, type Email, type InsertEmail, type Stats, type InsertStats } from "@shared/schema";
+import { emails, stats, activities, type Email, type InsertEmail, type Stats, type InsertStats, type Activity, type InsertActivity } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Email operations
@@ -15,6 +15,10 @@ export interface IStorage {
   getStats(): Promise<Stats>;
   updateStats(stats: Partial<InsertStats>): Promise<Stats>;
   incrementStat(field: keyof InsertStats): Promise<Stats>;
+  
+  // Activity operations
+  getActivities(): Promise<Activity[]>;
+  createActivity(activity: InsertActivity): Promise<Activity>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -61,6 +65,14 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     if (updatedEmail) {
+      // Log activity
+      await this.createActivity({
+        emailId: updatedEmail.id,
+        action: status,
+        emailSubject: updatedEmail.subject,
+        emailSender: updatedEmail.sender,
+      });
+      
       // Update stats
       const [currentStats] = await db.select().from(stats).limit(1);
       if (currentStats) {
@@ -150,6 +162,19 @@ export class DatabaseStorage implements IStorage {
     
     const initialStats = { processedToday: 0, forLater: 0, archived: 0, [field]: 1 };
     return this.updateStats(initialStats);
+  }
+
+  async getActivities(): Promise<Activity[]> {
+    const allActivities = await db.select().from(activities).orderBy(desc(activities.timestamp)).limit(50);
+    return allActivities;
+  }
+
+  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    const [activity] = await db
+      .insert(activities)
+      .values(insertActivity)
+      .returning();
+    return activity;
   }
 }
 
