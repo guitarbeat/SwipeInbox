@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useRef } from "react";
 import { useGesture } from "@use-gesture/react";
 
 interface UseSwipeOptions {
@@ -10,67 +10,80 @@ interface UseSwipeOptions {
 export function useSwipe({
   onSwipeLeft,
   onSwipeRight,
-  threshold = 120,
+  threshold = 100,
 }: UseSwipeOptions) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [rotation, setRotation] = useState(0);
+  const isResetting = useRef(false);
+
+  const resetState = () => {
+    if (isResetting.current) return;
+    isResetting.current = true;
+    
+    setIsDragging(false);
+    setDragOffset(0);
+    setSwipeDirection(null);
+    setRotation(0);
+    
+    setTimeout(() => {
+      isResetting.current = false;
+    }, 100);
+  };
 
   const bind = useGesture({
     onDragStart: () => {
+      if (isResetting.current) return;
       setIsDragging(true);
     },
     onDrag: ({ down, movement: [mx], velocity: [vx], cancel }) => {
-      if (!down) return;
+      if (!down || isResetting.current) return;
       
-      // Always update position for visual feedback
-      setDragOffset(mx);
+      // Smooth damping for large movements
+      const dampedMx = mx > 0 
+        ? Math.min(mx, 250 + (mx - 250) * 0.3)
+        : Math.max(mx, -250 + (mx + 250) * 0.3);
       
-      // Calculate rotation based on drag distance (Tinder-like effect)
-      const maxRotation = 15;
-      const rotationValue = (mx / 150) * maxRotation;
+      setDragOffset(dampedMx);
+      
+      // Calculate rotation with smoother easing
+      const maxRotation = 12;
+      const rotationValue = (dampedMx / 200) * maxRotation;
       setRotation(Math.max(-maxRotation, Math.min(maxRotation, rotationValue)));
       
-      // Show direction indicator when dragging past certain threshold
-      if (Math.abs(mx) > 50) {
-        setSwipeDirection(mx > 0 ? 'right' : 'left');
+      // Show direction indicator
+      if (Math.abs(dampedMx) > 40) {
+        setSwipeDirection(dampedMx > 0 ? 'right' : 'left');
       } else {
         setSwipeDirection(null);
       }
-      
-      // Prevent excessive dragging
-      if (Math.abs(mx) > 400) {
-        cancel();
-      }
     },
     onDragEnd: ({ movement: [mx], velocity: [vx] }) => {
-      // Check if we should trigger swipe action
-      const willSwipe = Math.abs(mx) > threshold || Math.abs(vx) > 0.5;
+      if (isResetting.current) return;
       
-      if (willSwipe) {
-        // Trigger the action
+      // Determine if we should swipe
+      const shouldSwipe = Math.abs(mx) > threshold || Math.abs(vx) > 0.8;
+      
+      if (shouldSwipe) {
+        // Execute the swipe action immediately
         if (mx > 0) {
           onSwipeRight?.();
         } else {
           onSwipeLeft?.();
         }
+        // Reset immediately after swipe
+        resetState();
+      } else {
+        // Animate back to center
+        resetState();
       }
-      
-      // Reset states with a slight delay to allow for smooth animation
-      setTimeout(() => {
-        setIsDragging(false);
-        setDragOffset(0);
-        setSwipeDirection(null);
-        setRotation(0);
-      }, willSwipe ? 0 : 200);
     },
   }, {
     drag: {
       filterTaps: true,
       axis: 'x',
-      bounds: { left: -300, right: 300 },
-      rubberband: 0.2,
+      from: () => [dragOffset, 0],
     }
   });
 

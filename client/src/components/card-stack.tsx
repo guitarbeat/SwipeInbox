@@ -118,21 +118,25 @@ export function CardStack({ emails }: CardStackProps) {
   const visibleEmails = emails.slice(currentIndex, currentIndex + 3);
 
   return (
-    <div className="relative h-[500px]">
-      <AnimatePresence>
+    <div className="relative h-[500px] touch-none">
+      <AnimatePresence mode="popLayout">
         {visibleEmails.map((email, index) => (
           <div
-            key={email.id}
+            key={`${email.id}-${currentIndex}`}
             {...(index === 0 ? bind() : {})}
-            className="absolute inset-0"
+            className="absolute inset-0 will-change-transform"
+            style={{ 
+              touchAction: index === 0 ? 'pan-y' : 'auto',
+              pointerEvents: index === 0 ? 'auto' : 'none',
+            }}
           >
             <EmailCard
               email={email}
               index={index}
               isDragging={isDragging && index === 0}
-              dragOffset={dragOffset}
-              swipeDirection={swipeDirection}
-              rotation={rotation}
+              dragOffset={index === 0 ? dragOffset : 0}
+              swipeDirection={index === 0 ? swipeDirection : null}
+              rotation={index === 0 ? rotation : 0}
             />
           </div>
         ))}

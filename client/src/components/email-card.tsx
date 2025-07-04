@@ -47,21 +47,25 @@ export function EmailCard({ email, index, isDragging, dragOffset = 0, swipeDirec
   // Calculate opacity for overlay based on drag distance
   const overlayOpacity = Math.min(Math.abs(dragOffset) / 150, 0.9);
 
+  const cardStyle = {
+    zIndex: 10 - index,
+    scale: isDragging && index === 0 ? 1.02 : 1 - (index * 0.03),
+    opacity: 1 - (index * 0.2),
+    y: index * 6,
+    x: index === 0 ? dragOffset : 0,
+    rotate: index === 0 ? rotation : index * 0.5,
+  };
+
   return (
     <motion.div
       className={`absolute inset-0 bg-white rounded-2xl shadow-lg ${
         index === 0 ? 'cursor-grab active:cursor-grabbing' : ''
-      } overflow-hidden`}
-      variants={cardVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      style={{
-        zIndex: 10 - index,
-        transform: isDragging && index === 0 
-          ? `translateX(${dragOffset}px) rotate(${rotation}deg)`
-          : undefined,
-        transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+      } overflow-hidden select-none`}
+      style={cardStyle}
+      transition={{
+        type: isDragging && index === 0 ? "tween" : "spring",
+        duration: isDragging && index === 0 ? 0 : 0.4,
+        ease: "easeOut",
       }}
     >
       {/* Swipe Action Overlays */}
