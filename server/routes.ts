@@ -195,6 +195,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Add demo emails for testing
+  app.post("/api/seed", async (req, res) => {
+    try {
+      const demoEmails = [
+        {
+          sender: "Sarah Wilson",
+          senderEmail: "sarah@company.com",
+          subject: "Q1 Marketing Campaign Results",
+          body: "Hi team, I wanted to share the exciting results from our Q1 marketing campaign. We exceeded our target by 25% and generated significant new leads...",
+          priority: "high",
+          status: "inbox"
+        },
+        {
+          sender: "LinkedIn",
+          senderEmail: "noreply@linkedin.com",
+          subject: "5 people viewed your profile this week",
+          body: "Your profile has been gaining attention! Here are the professionals who viewed your profile recently...",
+          priority: "normal",
+          status: "inbox"
+        },
+        {
+          sender: "GitHub",
+          senderEmail: "notifications@github.com",
+          subject: "Pull request merged: Fix authentication bug",
+          body: "Your pull request #247 has been successfully merged into the main branch. The authentication bug fix is now live...",
+          priority: "normal",
+          status: "inbox"
+        },
+        {
+          sender: "Newsletter Team",
+          senderEmail: "news@techworld.com",
+          subject: "This Week in Tech: AI Breakthroughs & More",
+          body: "Welcome to your weekly tech digest! This week we're covering the latest AI developments, new startup funding rounds...",
+          priority: "low",
+          status: "inbox"
+        }
+      ];
+
+      const savedEmails = [];
+      for (const email of demoEmails) {
+        const savedEmail = await storage.createEmail(email);
+        savedEmails.push(savedEmail);
+      }
+
+      res.json({ 
+        success: true, 
+        count: savedEmails.length, 
+        message: "Demo emails created successfully" 
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create demo emails" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

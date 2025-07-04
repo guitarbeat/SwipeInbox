@@ -104,7 +104,11 @@ The application uses a PostgreSQL database with two main tables:
 
 ```
 Changelog:
-- July 04, 2025. Initial setup
+- July 04, 2025. Initial setup with React/TypeScript prototype
+- July 04, 2025. Integrated PostgreSQL database for persistent data storage
+- July 04, 2025. Fixed swipe movement issues and improved drag responsiveness
+- July 04, 2025. Implemented IMAP email integration with support for Gmail, Yahoo, Outlook, and iCloud
+- July 04, 2025. Added comprehensive email connection interface with step-by-step provider setup instructions
 ```
 
 ## User Preferences

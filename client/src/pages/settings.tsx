@@ -308,13 +308,85 @@ export default function Settings() {
               </Button>
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-medium text-[var(--app-text)] mb-2">Setup Instructions:</h3>
+            {!emailProvider && (
+              <div className="text-center py-4">
+                <p className="text-sm text-[var(--app-text-secondary)] mb-3">
+                  Want to try the interface first? You can add some demo emails to test the swipe functionality.
+                </p>
+                <Button 
+                  onClick={() => {
+                    // Add demo emails
+                    fetch('/api/seed', { method: 'POST' })
+                      .then(() => {
+                        queryClient.invalidateQueries({ queryKey: ["/api/emails/status/inbox"] });
+                        toast({
+                          title: "Demo emails added!",
+                          description: "Try swiping through the sample emails in the main interface.",
+                        });
+                      })
+                      .catch(() => {
+                        toast({
+                          title: "Failed to add demo emails",
+                          variant: "destructive",
+                        });
+                      });
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  Add Demo Emails
+                </Button>
+              </div>
+            )}
+
+            <div className="bg-amber-50 p-4 rounded-lg">
+              <h3 className="font-medium text-[var(--app-text)] mb-3">⚠️ Important Setup Steps:</h3>
+              
+              {emailProvider === 'yahoo' && (
+                <div className="mb-3 p-3 bg-white rounded border-l-4 border-yellow-500">
+                  <h4 className="font-medium text-[var(--app-text)] mb-2">Yahoo Mail Setup:</h4>
+                  <ol className="text-sm text-[var(--app-text-secondary)] space-y-1 list-decimal list-inside">
+                    <li>Go to <a href="https://login.yahoo.com/account/security" target="_blank" className="text-blue-600 underline">Yahoo Account Security</a></li>
+                    <li>Turn on 2-step verification (required)</li>
+                    <li>Click "Generate app password"</li>
+                    <li>Select "Other app" and name it "SwipeEmail"</li>
+                    <li>Use the generated 16-character password above (not your regular password)</li>
+                  </ol>
+                  <p className="text-xs text-[var(--app-text-secondary)] mt-2">
+                    <strong>Note:</strong> Yahoo requires 2-step verification to be enabled before you can create app passwords.
+                  </p>
+                </div>
+              )}
+              
+              {emailProvider === 'gmail' && (
+                <div className="mb-3 p-3 bg-white rounded border-l-4 border-blue-500">
+                  <h4 className="font-medium text-[var(--app-text)] mb-2">Gmail Setup:</h4>
+                  <ol className="text-sm text-[var(--app-text-secondary)] space-y-1 list-decimal list-inside">
+                    <li>Enable 2-Factor Authentication in Google Account</li>
+                    <li>Go to Google Account Security</li>
+                    <li>Select "App passwords"</li>
+                    <li>Choose "Mail" and generate password</li>
+                    <li>Use the generated password (not your regular password)</li>
+                  </ol>
+                </div>
+              )}
+              
+              {emailProvider === 'outlook' && (
+                <div className="mb-3 p-3 bg-white rounded border-l-4 border-purple-500">
+                  <h4 className="font-medium text-[var(--app-text)] mb-2">Outlook Setup:</h4>
+                  <ol className="text-sm text-[var(--app-text-secondary)] space-y-1 list-decimal list-inside">
+                    <li>Go to Microsoft Account Security</li>
+                    <li>Enable 2-step verification</li>
+                    <li>Create an app password for "Mail"</li>
+                    <li>Use the app password instead of your regular password</li>
+                  </ol>
+                </div>
+              )}
+              
               <ul className="text-sm text-[var(--app-text-secondary)] space-y-1">
-                <li>• <strong>Gmail:</strong> Enable 2FA and create an app-specific password</li>
-                <li>• <strong>Outlook:</strong> Use your Microsoft account app password</li>
-                <li>• <strong>Yahoo:</strong> Generate an app password in account security</li>
-                <li>• <strong>iCloud:</strong> Use an app-specific password from Apple ID settings</li>
+                <li>• <strong>Never use your regular email password</strong> - always use app-specific passwords</li>
+                <li>• Most providers require 2-factor authentication enabled first</li>
+                <li>• App passwords are usually 16 characters without spaces</li>
               </ul>
             </div>
           </div>
