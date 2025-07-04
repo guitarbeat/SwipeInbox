@@ -14,6 +14,7 @@ export const emails = pgTable("emails", {
   status: text("status").notNull().default("inbox"), // inbox, later, archived, deleted
   attachments: integer("attachments").default(0),
   hasReply: boolean("has_reply").default(false),
+  externalId: text("external_id"), // For IMAP UID or other external references
 });
 
 export const stats = pgTable("stats", {

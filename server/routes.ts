@@ -108,6 +108,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test email connection
+  app.post("/api/email/test", async (req, res) => {
+    try {
+      const { provider, user, password } = req.body;
+      
+      if (!provider || !user || !password) {
+        return res.status(400).json({ error: "Provider, email, and password are required" });
+      }
+
+      const { EmailService, EMAIL_PROVIDERS } = await import('./email-service');
+      
+      const providerConfig = EMAIL_PROVIDERS[provider as keyof typeof EMAIL_PROVIDERS];
+      if (!providerConfig) {
+        return res.status(400).json({ error: "Unsupported email provider" });
+      }
+
+      const emailService = new EmailService({
+        ...providerConfig,
+        user,
+        password
+      });
+
+      const result = await emailService.testConnection();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ 
+        error: "Connection test failed", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Fetch emails from IMAP
+  app.post("/api/email/fetch", async (req, res) => {
+    try {
+      const { provider, user, password, limit = 20 } = req.body;
+      
+      if (!provider || !user || !password) {
+        return res.status(400).json({ error: "Provider, email, and password are required" });
+      }
+
+      const { EmailService, EMAIL_PROVIDERS } = await import('./email-service');
+      
+      const providerConfig = EMAIL_PROVIDERS[provider as keyof typeof EMAIL_PROVIDERS];
+      if (!providerConfig) {
+        return res.status(400).json({ error: "Unsupported email provider" });
+      }
+
+      const emailService = new EmailService({
+        ...providerConfig,
+        user,
+        password
+      });
+
+      const emails = await emailService.fetchEmails(limit);
+      
+      // Convert and save emails to database
+      const savedEmails = [];
+      for (const email of emails) {
+        const insertEmail = EmailService.toInsertEmail(email);
+        const savedEmail = await storage.createEmail(insertEmail);
+        savedEmails.push(savedEmail);
+      }
+
+      res.json({ 
+        success: true, 
+        count: savedEmails.length, 
+        emails: savedEmails 
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        error: "Failed to fetch emails", 
+        message: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+
+  // Get supported email providers
+  app.get("/api/email/providers", async (req, res) => {
+    try {
+      const { EMAIL_PROVIDERS } = await import('./email-service');
+      res.json(EMAIL_PROVIDERS);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get providers" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
