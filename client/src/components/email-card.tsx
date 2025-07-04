@@ -63,9 +63,11 @@ export function EmailCard({ email, index, isDragging, dragOffset = 0, swipeDirec
       } overflow-hidden select-none`}
       style={cardStyle}
       transition={{
-        type: isDragging && index === 0 ? "tween" : "spring",
-        duration: isDragging && index === 0 ? 0 : 0.4,
+        type: isDragging && index === 0 ? false : "spring",
+        duration: isDragging && index === 0 ? 0 : 0.3,
         ease: "easeOut",
+        damping: 25,
+        stiffness: 400,
       }}
     >
       {/* Swipe Action Overlays */}

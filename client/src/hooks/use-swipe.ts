@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useGesture } from "@use-gesture/react";
 
 interface UseSwipeOptions {
@@ -17,28 +17,36 @@ export function useSwipe({
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const [rotation, setRotation] = useState(0);
   const isResetting = useRef(false);
+  const isDraggingRef = useRef(false);
 
-  const resetState = () => {
-    if (isResetting.current) return;
+  const resetState = useCallback(() => {
+    if (isResetting.current || isDraggingRef.current) return;
     isResetting.current = true;
     
-    setIsDragging(false);
-    setDragOffset(0);
-    setSwipeDirection(null);
-    setRotation(0);
-    
-    setTimeout(() => {
-      isResetting.current = false;
-    }, 100);
-  };
+    // Use requestAnimationFrame for smoother state reset
+    requestAnimationFrame(() => {
+      setIsDragging(false);
+      setDragOffset(0);
+      setSwipeDirection(null);
+      setRotation(0);
+      
+      setTimeout(() => {
+        isResetting.current = false;
+      }, 16); // One frame delay
+    });
+  }, []);
 
   const bind = useGesture({
     onDragStart: () => {
       if (isResetting.current) return;
+      isDraggingRef.current = true;
       setIsDragging(true);
     },
     onDrag: ({ down, movement: [mx], velocity: [vx], cancel }) => {
       if (!down || isResetting.current) return;
+      
+      // Ensure we're still tracking as dragging
+      isDraggingRef.current = true;
       
       // Smooth damping for large movements
       const dampedMx = mx > 0 
@@ -61,6 +69,9 @@ export function useSwipe({
     },
     onDragEnd: ({ movement: [mx], velocity: [vx] }) => {
       if (isResetting.current) return;
+      
+      // Mark dragging as complete
+      isDraggingRef.current = false;
       
       // Determine if we should swipe
       const shouldSwipe = Math.abs(mx) > threshold || Math.abs(vx) > 0.8;
