@@ -1,11 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Settings } from "lucide-react";
+import { Settings, Moon, Sun } from "lucide-react";
 import { Link } from "wouter";
 import { CardStack } from "@/components/card-stack";
+import { useTheme } from "@/contexts/theme-context";
 import { type Email, type Stats } from "@shared/schema";
 
 export default function Home() {
+  const { theme, toggleTheme } = useTheme();
+  
   const { data: emails = [], isLoading: emailsLoading } = useQuery<Email[]>({
     queryKey: ["/api/emails/status/inbox"],
   });
@@ -16,28 +19,37 @@ export default function Home() {
 
   if (emailsLoading || statsLoading) {
     return (
-      <div className="min-h-screen bg-[var(--app-background)] flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-[var(--app-text-secondary)]">Loading emails...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading emails...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--app-background)] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md relative">
-        {/* Settings button */}
+        {/* Theme toggle and Settings buttons */}
         <motion.div
-          className="absolute top-0 right-0 z-20"
+          className="absolute top-0 right-0 z-20 flex gap-2"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
+          <button 
+            onClick={toggleTheme}
+            className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-200"
+          >
+            {theme === 'dark' ? 
+              <Sun className="w-5 h-5 text-yellow-500" /> : 
+              <Moon className="w-5 h-5 text-gray-600" />
+            }
+          </button>
           <Link href="/settings">
-            <button className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-200">
-              <Settings className="w-5 h-5 text-[var(--app-text-secondary)]" />
+            <button className="w-10 h-10 bg-white dark:bg-gray-800 rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-200">
+              <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
           </Link>
         </motion.div>

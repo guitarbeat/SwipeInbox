@@ -49,16 +49,16 @@ export function EmailCard({ email, index, isDragging, dragOffset = 0, swipeDirec
 
   const cardStyle = {
     zIndex: 10 - index,
-    scale: isDragging && index === 0 ? 1.02 : 1 - (index * 0.03),
-    opacity: 1 - (index * 0.2),
-    y: index * 6,
+    scale: isDragging && index === 0 ? 1.02 : 1 - (index * 0.02),
+    opacity: index === 0 ? 1 : 0.8 - (index * 0.15),
+    y: index * 4,
     x: index === 0 ? dragOffset : 0,
-    rotate: index === 0 ? rotation : index * 0.5,
+    rotate: index === 0 ? rotation : index * 0.3,
   };
 
   return (
     <motion.div
-      className={`absolute inset-0 bg-white rounded-2xl shadow-lg ${
+      className={`absolute inset-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl ${
         index === 0 ? 'cursor-grab active:cursor-grabbing' : ''
       } overflow-hidden select-none`}
       style={cardStyle}
@@ -94,15 +94,15 @@ export function EmailCard({ email, index, isDragging, dragOffset = 0, swipeDirec
             <span className="font-medium text-lg">{getInitials(email.sender)}</span>
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-[var(--app-text)] text-lg">{email.sender}</h3>
-            <p className="text-[var(--app-text-secondary)] text-sm">{email.senderEmail}</p>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg">{email.sender}</h3>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">{email.senderEmail}</p>
           </div>
         </div>
         
-        <h4 className="font-semibold text-[var(--app-text)] mb-4 text-lg leading-snug">{email.subject}</h4>
+        <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-4 text-lg leading-snug">{email.subject}</h4>
         
         <div className="flex-1 overflow-y-auto">
-          <div className="text-[var(--app-text-secondary)] text-base leading-relaxed whitespace-pre-wrap">
+          <div className="text-gray-600 dark:text-gray-400 text-base leading-relaxed whitespace-pre-wrap">
             {email.body}
           </div>
         </div>
