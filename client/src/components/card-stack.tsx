@@ -41,11 +41,12 @@ export function CardStack({ emails }: CardStackProps) {
     isDragging,
     dragOffset,
     swipeDirection,
+    rotation,
     bind,
   } = useSwipe({
     onSwipeLeft: () => handleSwipe('left'),
     onSwipeRight: () => handleSwipe('right'),
-    threshold: 80,
+    threshold: 120,
   });
 
   const handleSwipe = (direction: 'left' | 'right') => {
@@ -131,6 +132,7 @@ export function CardStack({ emails }: CardStackProps) {
               isDragging={isDragging && index === 0}
               dragOffset={dragOffset}
               swipeDirection={swipeDirection}
+              rotation={rotation}
             />
           </div>
         ))}

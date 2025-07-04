@@ -1,4 +1,6 @@
 import { emails, stats, type Email, type InsertEmail, type Stats, type InsertStats } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Email operations
@@ -15,166 +17,140 @@ export interface IStorage {
   incrementStat(field: keyof InsertStats): Promise<Stats>;
 }
 
-export class MemStorage implements IStorage {
-  private emails: Map<number, Email>;
-  private stats: Stats;
-  private currentEmailId: number;
-
-  constructor() {
-    this.emails = new Map();
-    this.currentEmailId = 1;
-    this.stats = {
-      id: 1,
-      processedToday: 0,
-      forLater: 0,
-      archived: 0,
-    };
-    
-    // Initialize with some sample emails
-    this.initializeEmails();
-  }
-
-  private async initializeEmails() {
-    const sampleEmails: InsertEmail[] = [
-      {
-        sender: "Sarah Anderson",
-        senderEmail: "sarah@company.com",
-        subject: "Meeting Reschedule Request",
-        body: "Hi Team,\n\nI hope this email finds you well. I need to reschedule our meeting that was planned for tomorrow at 2 PM due to an unexpected client call that came up.\n\nWould it be possible to move it to Thursday at the same time? I know this is short notice, but I wanted to give you as much heads up as possible.\n\nPlease let me know if this works for everyone. If not, I'm flexible with alternative times throughout the week.\n\nThe agenda will remain the same:\n• Project timeline review\n• Budget allocation discussion\n• Next quarter planning\n\nThanks for your understanding!\n\nBest regards,\nSarah",
-        priority: "Urgent",
-        unread: true,
-        status: "inbox",
-        attachments: 2,
-        hasReply: true,
-      },
-      {
-        sender: "John Doe",
-        senderEmail: "john@company.com",
-        subject: "Project Update Required",
-        body: "Hi there!\n\nI need an update on the current project status. Could you please provide:\n\n• Current progress percentage\n• Any blockers or challenges\n• Expected completion date\n• Resource requirements\n\nThis will help me prepare for the client meeting next week.\n\nThanks!",
-        priority: "Important",
-        unread: true,
-        status: "inbox",
-        attachments: 0,
-        hasReply: false,
-      },
-      {
-        sender: "Marketing Team",
-        senderEmail: "marketing@company.com",
-        subject: "Q4 Campaign Results",
-        body: "Our Q4 marketing campaign exceeded expectations with:\n\n• 45% increase in website traffic\n• 32% boost in lead generation\n• 28% improvement in conversion rates\n\nDetailed report attached. Great work everyone!",
-        priority: "Marketing",
-        unread: true,
-        status: "inbox",
-        attachments: 1,
-        hasReply: false,
-      },
-      {
-        sender: "HR Department",
-        senderEmail: "hr@company.com",
-        subject: "Annual Review Process",
-        body: "It's time for annual performance reviews. Please complete your self-assessment form by end of week.",
-        priority: "Important",
-        unread: true,
-        status: "inbox",
-        attachments: 1,
-        hasReply: false,
-      },
-      {
-        sender: "Finance Team",
-        senderEmail: "finance@company.com",
-        subject: "Expense Report Submission",
-        body: "Please submit your expense reports for this quarter by Friday. All receipts must be attached.",
-        priority: "Normal",
-        unread: true,
-        status: "inbox",
-        attachments: 0,
-        hasReply: false,
-      },
-    ];
-
-    for (const email of sampleEmails) {
-      await this.createEmail(email);
-    }
-  }
-
+export class DatabaseStorage implements IStorage {
   async getAllEmails(): Promise<Email[]> {
-    return Array.from(this.emails.values()).sort((a, b) => 
+    const allEmails = await db.select().from(emails).orderBy(emails.timestamp);
+    return allEmails.reverse();
+  }
+
+  async getEmailsByStatus(status: string): Promise<Email[]> {
+    const emailsByStatus = await db.select().from(emails).where(eq(emails.status, status));
+    return emailsByStatus.sort((a, b) => 
       new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime()
     );
   }
 
-  async getEmailsByStatus(status: string): Promise<Email[]> {
-    return Array.from(this.emails.values())
-      .filter(email => email.status === status)
-      .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
-  }
-
   async getEmail(id: number): Promise<Email | undefined> {
-    return this.emails.get(id);
+    const [email] = await db.select().from(emails).where(eq(emails.id, id));
+    return email || undefined;
   }
 
   async createEmail(insertEmail: InsertEmail): Promise<Email> {
-    const id = this.currentEmailId++;
-    const email: Email = {
-      id,
-      sender: insertEmail.sender,
-      senderEmail: insertEmail.senderEmail,
-      subject: insertEmail.subject,
-      body: insertEmail.body,
-      timestamp: new Date(),
-      priority: insertEmail.priority || "Normal",
-      unread: insertEmail.unread ?? true,
-      status: insertEmail.status || "inbox",
-      attachments: insertEmail.attachments || 0,
-      hasReply: insertEmail.hasReply || false,
-    };
-    this.emails.set(id, email);
+    const [email] = await db
+      .insert(emails)
+      .values({
+        sender: insertEmail.sender,
+        senderEmail: insertEmail.senderEmail,
+        subject: insertEmail.subject,
+        body: insertEmail.body,
+        priority: insertEmail.priority || "Normal",
+        unread: insertEmail.unread ?? true,
+        status: insertEmail.status || "inbox",
+        attachments: insertEmail.attachments || 0,
+        hasReply: insertEmail.hasReply || false,
+      })
+      .returning();
     return email;
   }
 
   async updateEmailStatus(id: number, status: string): Promise<Email | undefined> {
-    const email = this.emails.get(id);
-    if (!email) return undefined;
-
-    const updatedEmail = { ...email, status };
-    this.emails.set(id, updatedEmail);
+    const [updatedEmail] = await db
+      .update(emails)
+      .set({ status })
+      .where(eq(emails.id, id))
+      .returning();
     
-    // Update stats
-    if (status === "later") {
-      this.stats.forLater = (this.stats.forLater || 0) + 1;
-    } else if (status === "archived") {
-      this.stats.archived = (this.stats.archived || 0) + 1;
+    if (updatedEmail) {
+      // Update stats
+      const [currentStats] = await db.select().from(stats).limit(1);
+      if (currentStats) {
+        await db
+          .update(stats)
+          .set({
+            processedToday: (currentStats.processedToday || 0) + 1,
+            forLater: status === "later" ? (currentStats.forLater || 0) + 1 : currentStats.forLater,
+            archived: status === "archived" ? (currentStats.archived || 0) + 1 : currentStats.archived,
+          })
+          .where(eq(stats.id, currentStats.id));
+      }
     }
-    this.stats.processedToday = (this.stats.processedToday || 0) + 1;
     
-    return updatedEmail;
+    return updatedEmail || undefined;
   }
 
   async deleteEmail(id: number): Promise<boolean> {
-    const deleted = this.emails.delete(id);
+    const result = await db.delete(emails).where(eq(emails.id, id));
+    const deleted = result.rowCount ? result.rowCount > 0 : false;
+    
     if (deleted) {
-      this.stats.processedToday = (this.stats.processedToday || 0) + 1;
-      this.stats.archived = (this.stats.archived || 0) + 1;
+      // Update stats
+      const [currentStats] = await db.select().from(stats).limit(1);
+      if (currentStats) {
+        await db
+          .update(stats)
+          .set({
+            processedToday: (currentStats.processedToday || 0) + 1,
+            archived: (currentStats.archived || 0) + 1,
+          })
+          .where(eq(stats.id, currentStats.id));
+      }
     }
+    
     return deleted;
   }
 
   async getStats(): Promise<Stats> {
-    return { ...this.stats };
+    const [currentStats] = await db.select().from(stats).limit(1);
+    if (currentStats) {
+      return currentStats;
+    }
+    
+    // Create initial stats if none exist
+    const [newStats] = await db
+      .insert(stats)
+      .values({
+        processedToday: 0,
+        forLater: 0,
+        archived: 0,
+      })
+      .returning();
+    
+    return newStats;
   }
 
   async updateStats(newStats: Partial<InsertStats>): Promise<Stats> {
-    this.stats = { ...this.stats, ...newStats };
-    return this.stats;
+    const [currentStats] = await db.select().from(stats).limit(1);
+    if (currentStats) {
+      const [updatedStats] = await db
+        .update(stats)
+        .set(newStats)
+        .where(eq(stats.id, currentStats.id))
+        .returning();
+      return updatedStats;
+    }
+    
+    const [createdStats] = await db
+      .insert(stats)
+      .values({
+        processedToday: newStats.processedToday || 0,
+        forLater: newStats.forLater || 0,
+        archived: newStats.archived || 0,
+      })
+      .returning();
+    
+    return createdStats;
   }
 
   async incrementStat(field: keyof InsertStats): Promise<Stats> {
-    if (typeof this.stats[field] === 'number') {
-      (this.stats as any)[field] = (this.stats as any)[field] + 1;
+    const [currentStats] = await db.select().from(stats).limit(1);
+    if (currentStats) {
+      const increment = { [field]: (currentStats[field] || 0) + 1 };
+      return this.updateStats(increment);
     }
-    return this.stats;
+    
+    const initialStats = { processedToday: 0, forLater: 0, archived: 0, [field]: 1 };
+    return this.updateStats(initialStats);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

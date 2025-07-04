@@ -7,9 +7,10 @@ interface EmailCardProps {
   isDragging?: boolean;
   dragOffset?: number;
   swipeDirection?: 'left' | 'right' | null;
+  rotation?: number;
 }
 
-export function EmailCard({ email, index, isDragging, dragOffset = 0, swipeDirection }: EmailCardProps) {
+export function EmailCard({ email, index, isDragging, dragOffset = 0, swipeDirection, rotation = 0 }: EmailCardProps) {
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -30,18 +31,27 @@ export function EmailCard({ email, index, isDragging, dragOffset = 0, swipeDirec
   const cardVariants = {
     initial: { scale: 0.95 - (index * 0.02), opacity: 0.8 - (index * 0.3), rotate: index * 1 },
     animate: { scale: 1 - (index * 0.03), opacity: 1 - (index * 0.3), rotate: index * 1 },
-    exit: { scale: 0.8, opacity: 0, rotate: dragOffset > 0 ? 20 : -20 }
+    exit: { 
+      scale: 0.8, 
+      opacity: 0, 
+      rotate: dragOffset > 0 ? 30 : -30,
+      x: dragOffset > 0 ? 400 : -400,
+      transition: { duration: 0.3 }
+    }
   };
 
   // Show action indicators during drag
   const showDeleteIndicator = isDragging && swipeDirection === 'left';
   const showLaterIndicator = isDragging && swipeDirection === 'right';
 
+  // Calculate opacity for overlay based on drag distance
+  const overlayOpacity = Math.min(Math.abs(dragOffset) / 150, 0.9);
+
   return (
     <motion.div
       className={`absolute inset-0 bg-white rounded-2xl shadow-lg ${
         index === 0 ? 'cursor-grab active:cursor-grabbing' : ''
-      } transition-all duration-300 overflow-hidden`}
+      } overflow-hidden`}
       variants={cardVariants}
       initial="initial"
       animate="animate"
@@ -49,18 +59,25 @@ export function EmailCard({ email, index, isDragging, dragOffset = 0, swipeDirec
       style={{
         zIndex: 10 - index,
         transform: isDragging && index === 0 
-          ? `translateX(${dragOffset}px) rotate(${dragOffset * 0.05}deg)`
+          ? `translateX(${dragOffset}px) rotate(${rotation}deg)`
           : undefined,
+        transition: isDragging ? 'none' : 'transform 0.3s ease-out',
       }}
     >
       {/* Swipe Action Overlays */}
       {showDeleteIndicator && (
-        <div className="absolute inset-0 bg-red-500 bg-opacity-90 flex items-center justify-start pl-8 z-10">
+        <div 
+          className="absolute inset-0 bg-red-500 flex items-center justify-start pl-8 z-10"
+          style={{ opacity: overlayOpacity }}
+        >
           <div className="text-white text-xl font-semibold">Delete</div>
         </div>
       )}
       {showLaterIndicator && (
-        <div className="absolute inset-0 bg-green-500 bg-opacity-90 flex items-center justify-end pr-8 z-10">
+        <div 
+          className="absolute inset-0 bg-green-500 flex items-center justify-end pr-8 z-10"
+          style={{ opacity: overlayOpacity }}
+        >
           <div className="text-white text-xl font-semibold">Later</div>
         </div>
       )}

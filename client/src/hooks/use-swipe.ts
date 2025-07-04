@@ -10,57 +10,67 @@ interface UseSwipeOptions {
 export function useSwipe({
   onSwipeLeft,
   onSwipeRight,
-  threshold = 100,
+  threshold = 120,
 }: UseSwipeOptions) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [rotation, setRotation] = useState(0);
 
   const bind = useGesture({
     onDrag: ({ down, movement: [mx], direction: [xDir], velocity: [vx], cancel }) => {
-      setIsDragging(down);
-      
       if (down) {
+        setIsDragging(true);
         setDragOffset(mx);
         
-        // Show direction indicator earlier for better feedback
-        if (Math.abs(mx) > 30) {
+        // Calculate rotation based on drag distance (Tinder-like effect)
+        const maxRotation = 15;
+        const rotationValue = (mx / 150) * maxRotation;
+        setRotation(Math.max(-maxRotation, Math.min(maxRotation, rotationValue)));
+        
+        // Show direction indicator when dragging past certain threshold
+        if (Math.abs(mx) > 50) {
           setSwipeDirection(mx > 0 ? 'right' : 'left');
         } else {
           setSwipeDirection(null);
         }
         
-        // Cancel drag if movement is too far to prevent weird behavior
-        if (Math.abs(mx) > 300) {
+        // Prevent excessive dragging
+        if (Math.abs(mx) > 400) {
           cancel();
         }
       } else {
-        // Release
-        setDragOffset(0);
-        setSwipeDirection(null);
+        // Release - check if we should trigger swipe action
+        const willSwipe = Math.abs(mx) > threshold || Math.abs(vx) > 0.5;
         
-        // More sensitive swipe detection
-        const isSignificantSwipe = Math.abs(mx) > threshold || Math.abs(vx) > 0.3;
-        
-        if (isSignificantSwipe) {
+        if (willSwipe) {
+          // Trigger the action
           if (mx > 0) {
             onSwipeRight?.();
           } else {
             onSwipeLeft?.();
           }
         }
+        
+        // Reset states
+        setIsDragging(false);
+        setDragOffset(0);
+        setSwipeDirection(null);
+        setRotation(0);
       }
     },
     onDragEnd: () => {
       setIsDragging(false);
       setDragOffset(0);
       setSwipeDirection(null);
+      setRotation(0);
     },
   }, {
     drag: {
       filterTaps: true,
-      axis: 'x', // Only allow horizontal dragging
-      from: () => [0, 0], // Reset drag from current position
+      axis: 'x',
+      bounds: { left: -400, right: 400 },
+      rubberband: 0.1,
     }
   });
 
@@ -68,6 +78,7 @@ export function useSwipe({
     isDragging,
     dragOffset,
     swipeDirection,
+    rotation,
     bind,
   };
 }
