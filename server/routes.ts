@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
+import { emailCredentialsSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all emails
@@ -111,11 +112,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test email connection
   app.post("/api/email/test", async (req, res) => {
     try {
-      const { provider, user, password } = req.body;
-      
-      if (!provider || !user || !password) {
-        return res.status(400).json({ error: "Provider, email, and password are required" });
+      const result = emailCredentialsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Invalid request body",
+          details: result.error.flatten().fieldErrors
+        });
       }
+      const { provider, user, password } = result.data;
 
       const { EmailService, EMAIL_PROVIDERS } = await import('./email-service');
       
@@ -130,8 +134,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password
       });
 
-      const result = await emailService.testConnection();
-      res.json(result);
+      const connectionResult = await emailService.testConnection();
+      res.json(connectionResult);
     } catch (error) {
       res.status(500).json({ 
         error: "Connection test failed", 
@@ -143,11 +147,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Fetch emails from IMAP
   app.post("/api/email/fetch", async (req, res) => {
     try {
-      const { provider, user, password, limit = 20 } = req.body;
-      
-      if (!provider || !user || !password) {
-        return res.status(400).json({ error: "Provider, email, and password are required" });
+      const result = emailCredentialsSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({
+          error: "Invalid request body",
+          details: result.error.flatten().fieldErrors
+        });
       }
+      const { provider, user, password } = result.data;
+      const { limit = 20 } = req.body;
 
       const { EmailService, EMAIL_PROVIDERS } = await import('./email-service');
       
@@ -162,11 +170,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password
       });
 
-      const emails = await emailService.fetchEmails(limit);
+      const fetchedEmails = await emailService.fetchEmails(limit);
       
       // Convert and save emails to database
       const savedEmails = [];
-      for (const email of emails) {
+      for (const email of fetchedEmails) {
         const insertEmail = EmailService.toInsertEmail(email);
         const savedEmail = await storage.createEmail(insertEmail);
         savedEmails.push(savedEmail);

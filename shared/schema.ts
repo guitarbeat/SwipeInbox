@@ -53,3 +53,11 @@ export type Stats = typeof stats.$inferSelect;
 export type InsertStats = z.infer<typeof insertStatsSchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertActivity = z.infer<typeof insertActivitySchema>;
+
+export const emailCredentialsSchema = z.object({
+  provider: z.string().min(1, "Email provider is required"),
+  user: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type EmailCredentials = z.infer<typeof emailCredentialsSchema>;

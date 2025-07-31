@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, CheckCircle, Clock, Archive, BarChart3, Activity, Mail, Loader2 } from "lucide-react";
 import { Link } from "wouter";
-import { type Stats, type Activity as ActivityType } from "@shared/schema";
+import { type Stats, type Activity as ActivityType, emailCredentialsSchema } from "@shared/schema";
 import { formatTimeAgo } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,36 +80,46 @@ export default function Settings() {
   });
 
   const handleTestConnection = () => {
-    if (!emailProvider || !emailAddress || !password) {
+    const result = emailCredentialsSchema.safeParse({
+      provider: emailProvider,
+      user: emailAddress,
+      password: password,
+    });
+
+    if (!result.success) {
+      const errors = result.error.flatten().fieldErrors;
+      const errorMessages = Object.values(errors).flat().join(", ");
       toast({
-        title: "Missing information",
-        description: "Please fill in all fields to test the connection.",
+        title: "Invalid information",
+        description: errorMessages,
         variant: "destructive",
       });
       return;
     }
 
-    testConnectionMutation.mutate({
+    testConnectionMutation.mutate(result.data);
+  };
+
+  const handleFetchEmails = () => {
+    const result = emailCredentialsSchema.safeParse({
       provider: emailProvider,
       user: emailAddress,
       password: password,
     });
-  };
 
-  const handleFetchEmails = () => {
-    if (!emailProvider || !emailAddress || !password) {
+    if (!result.success) {
+      const errors = result.error.flatten().fieldErrors;
+      const errorMessages = Object.values(errors).flat().join(", ");
       toast({
-        title: "Missing information",
-        description: "Please fill in all fields to fetch emails.",
+        title: "Invalid information",
+        description: errorMessages,
         variant: "destructive",
       });
       return;
     }
 
     fetchEmailsMutation.mutate({
-      provider: emailProvider,
-      user: emailAddress,
-      password: password,
+      ...result.data,
       limit: 20,
     });
   };
