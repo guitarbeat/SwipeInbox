@@ -64,11 +64,6 @@ export function formatTimeAgo(timestamp: Date | string | null): string {
   return date.toLocaleDateString();
 }
 
-export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
 export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + '...';
