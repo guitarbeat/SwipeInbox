@@ -1,26 +1,26 @@
 # TODO
 
 ## Setup & Env
-- [ ] Add npm script for seeding: `"db:seed": "tsx server/seed.ts"`
+- [x] Add npm script for seeding: `"db:seed": "tsx server/seed.ts"`
 - [ ] Document local dev and prod steps in `README.md`
 
 ## Backend API (Express)
-- [ ] Validate `PATCH /api/emails/:id/status` with allowed statuses (`inbox|later|archived|deleted`) via Zod
-- [ ] Add pagination to `GET /api/emails` and `GET /api/emails/status/:status` (`limit`, `offset`)
-- [ ] Add search/filter endpoint (by sender, subject, date range)
-- [ ] Fix prod static path mismatch: make `serveStatic` serve from root `dist/public` or change Vite outDir to `server/public`
-- [ ] Rate-limit IMAP endpoints (`/api/email/test`, `/api/email/fetch`)
+- [x] Validate `PATCH /api/emails/:id/status` with allowed statuses (`inbox|later|archived|deleted`) via Zod
+- [x] Add pagination to `GET /api/emails` and `GET /api/emails/status/:status` (`limit`, `offset`)
+- [x] Add search/filter endpoint (by sender, subject, date range)
+- [x] Fix prod static path mismatch: make `serveStatic` serve from root `dist/public` or change Vite outDir to `server/public`
+- [x] Rate-limit IMAP endpoints (`/api/email/test`, `/api/email/fetch`)
 - [ ] Add OpenAPI/route docs for all endpoints
-- [ ] Add healthcheck endpoint
+- [x] Add healthcheck endpoint
 
 ## Storage Layer (Drizzle operations)
-- [ ] Order by `desc(emails.timestamp)` instead of fetching then reversing in `getAllEmails`
-- [ ] Record `activities.action = "deleted"` on delete
-- [ ] Wrap multi-step updates (status change + stats + activities) in a transaction
+- [x] Order by `desc(emails.timestamp)` instead of fetching then reversing in `getAllEmails`
+- [x] Record `activities.action = "deleted"` on delete
+- [x] Wrap multi-step updates (status change + stats + activities) in a transaction
 
 ## Email Service (IMAP)
-- [ ] Parse and persist `senderEmail` in `toInsertEmail` (currently empty string)
-- [ ] Derive `attachments` count and `hasReply` when available
+- [x] Parse and persist `senderEmail` in `toInsertEmail` (now extracted)
+- [x] Derive `attachments` count and `hasReply` when available
 - [ ] Optional: endpoint to mark IMAP message as read and/or move to folder after processing
 
 ## Frontend (React + Wouter + React Query)
@@ -32,7 +32,7 @@
 - [ ] Theme support using `ThemeProvider`; add theme toggle in header
 
 ## Build & Deploy
-- [ ] Ensure `npm run build` outputs client to `dist/public` and server to `dist/index.js`; verify `npm start` serves app
+- [x] Ensure `npm run build` outputs client to `dist/public` and server to `dist/index.js`; verify `npm start` serves app
 - [ ] Add production logging
 
 ## Testing & QA

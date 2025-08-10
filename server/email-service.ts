@@ -13,10 +13,13 @@ export interface EmailConfig {
 export interface EmailMessage {
   id: string;
   subject: string;
-  from: string;
+  from: string; // sender name
+  fromEmail: string; // sender email address
   date: Date;
   body: string;
   priority: string;
+  attachments: number;
+  hasReply: boolean;
 }
 
 export class EmailService {
@@ -67,6 +70,21 @@ export class EmailService {
       const messages = await connection.search(searchCriteria, fetchOptions);
       
       const emails: EmailMessage[] = [];
+
+      const countAttachments = (struct: any): number => {
+        if (!struct) return 0;
+        const parts = Array.isArray(struct) ? struct : [struct];
+        let count = 0;
+        for (const part of parts) {
+          const isAttachment =
+            (part.disposition && part.disposition.type && part.disposition.type.toUpperCase() === 'ATTACHMENT') ||
+            (part.disposition && part.disposition.params && part.disposition.params.filename) ||
+            (part.params && (part.params.name || part.params.filename));
+          if (isAttachment) count += 1;
+          if (part.parts && part.parts.length) count += countAttachments(part.parts);
+        }
+        return count;
+      };
       
       for (const message of messages.slice(0, limit)) {
         try {
@@ -81,25 +99,31 @@ export class EmailService {
             const fromField = (parsed.from && parsed.from[0]) || 'Unknown Sender';
             const dateField = (parsed.date && parsed.date[0]) || new Date().toISOString();
             const priority = (parsed['x-priority'] && parsed['x-priority'][0]) || 'normal';
+            const hasReply = Boolean(parsed['in-reply-to']);
             
             // Parse sender name and email
             const fromMatch = fromField.match(/^(.*?)\s*<(.+)>$/) || fromField.match(/^(.+)$/);
             const senderName = fromMatch ? (fromMatch[1] || fromMatch[0]).trim().replace(/"/g, '') : 'Unknown';
-            const senderEmail = fromMatch && fromMatch[2] ? fromMatch[2].trim() : fromField;
+            const senderEmail = fromMatch && (fromMatch[2] || fromMatch[1]) ? (fromMatch[2] || fromMatch[1]).trim() : fromField;
             
             // Get body text
             let bodyText = '';
             if (body && body.body) {
               bodyText = body.body.toString().substring(0, 500); // Limit body length
             }
+
+            const attachmentCount = countAttachments(message.attributes?.struct);
             
             emails.push({
               id: message.attributes.uid.toString(),
               subject: subject,
               from: senderName,
+              fromEmail: senderEmail,
               date: new Date(dateField),
               body: bodyText,
-              priority: priority.toLowerCase()
+              priority: priority.toLowerCase(),
+              attachments: attachmentCount,
+              hasReply,
             });
           }
         } catch (parseError) {
@@ -173,10 +197,12 @@ export class EmailService {
     return {
       subject: email.subject,
       sender: email.from,
-      senderEmail: '', // Will be extracted separately if needed
+      senderEmail: email.fromEmail,
       body: email.body,
       status: 'inbox',
       priority: email.priority,
+      attachments: email.attachments,
+      hasReply: email.hasReply,
       externalId: email.id
     };
   }
